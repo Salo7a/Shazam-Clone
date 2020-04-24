@@ -55,12 +55,9 @@ def SpectrogramFeatures(spectrogram):
     specRolls = SpectralRollOff(spectrogram)
     polyFeatures = PolyFeatures(spectrogram)
     bandwidth = SpectralBandwidth(spectrogram)
-    features = np.append(mfcc, specCentroids)
-    features = np.append(features, specRolls)
-    features = np.append(features, polyFeatures)
-    features = np.append(features, bandwidth)
+    features = np.concatenate((mfcc, specCentroids))
+    features = np.concatenate((features, specRolls))
+    features = np.concatenate((features, polyFeatures))
+    features = np.concatenate((features, bandwidth))
     # print(features.shape)
     return features
-
-
-
