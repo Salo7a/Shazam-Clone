@@ -1,20 +1,25 @@
-from AudioFunctions import *
-from scipy import signal
-import matplotlib.pyplot as plt
 import librosa
-import sklearn
-from scipy import spatial
-from sklearn.metrics.pairwise import cosine_similarity
 import librosa.display
+from scipy import signal
+
+from AudioFunctions import *
+from Utils import *
+
 
 # USE THIS FUNCTION....
 def getSpectrogram(path):
     songClass = song2data(path)
     songArray = getFirstData(songClass.data, 60)
-    frequencies, times, spectrogram = signal.spectrogram(songArray, 44100)
-    melSpectrogram = librosa.feature.melspectrogram(S=spectrogram)
-    features = SpectrogramFeatures(melSpectrogram)
-    return melSpectrogram, features
+    frequencies, times, spectrogram = signal.spectrogram(songArray, 44100, window="hanning", nperseg=4096,
+                                                         noverlap=2048,
+                                                         nfft=4096)
+    features = SpectrogramFeatures(spectrogram)
+    spectrogram = 10 * np.log10(spectrogram)
+    spectrogram[spectrogram == -np.inf] = 0
+    features = 10 * np.log10(features)
+    features[features == -np.inf] = 0
+
+    return spectrogram, features, times
 
 
 def MFCC(spectrogram):
@@ -30,6 +35,7 @@ def SpectralCentroid(spectrogram):
     print(spectCentroids.shape)
     return spectCentroids
 
+
 def SpectralRollOff(spectrogram):
     # S = librosa.feature.melspectrogram(S=spectrogram)
     specRolls = librosa.feature.spectral_rolloff(S=spectrogram)
@@ -42,6 +48,7 @@ def PolyFeatures(spectrogram):
     polyFeatures = librosa.feature.poly_features(S=spectrogram, order=2)
     print(polyFeatures.shape)
     return polyFeatures
+
 
 def SpectralBandwidth(spectrogram):
     # S = librosa.feature.melspectrogram(S=spectrogram)
@@ -61,3 +68,17 @@ def SpectrogramFeatures(spectrogram):
     features = np.concatenate((features, bandwidth))
     # print(features.shape)
     return features
+
+
+dh = DatabaseHandler()
+db = dh.GetDB()
+Song = Query()
+test = db.get(Song.TeamNo == "17")
+MusicSpec, MusicFeatures, times = getSpectrogram("Songs/" + test['MusicFile'])
+MusicSpecHash = HashArray(MusicSpec)
+# SongFeaturesHash = HashArray(MusicFeatures)
+# db.update({"MusicSpecHash": str(MusicSpecHash)}, Song.MusicFile == test['MusicFile'])
+# test2 = db.get(Song.TeamNo == "21")
+# t1 = hex_to_hash(test2['MusicSpecHash'])
+# t2 = hex_to_hash(test2['SongSpecHash'])
+# t3 = MusicSpecHash
