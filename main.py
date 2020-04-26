@@ -6,7 +6,7 @@ db = dh.GetDB()
 
 # dh.UpdateDB()
 
-def FindSimilar(Path):
+def FindSimilar(Path, Mode="Permissive"):
     print(colored(f"Reading File {Path}",
                   "yellow"))
     spectrogram, features = getSpectrogram(Path)
@@ -17,12 +17,12 @@ def FindSimilar(Path):
     for Song in db.all():
         Title = Song['Title']
         print(colored("For Song:", "yellow"), colored(f"{Title}", "magenta"))
-        SongSpec = ArraySimilarity(SpecHash, Song['SongSpecHash'])
-        SongFeatures = ArraySimilarity(FeaturesHash, Song['SongFeaturesHash'])
-        VocalsSpec = ArraySimilarity(SpecHash, Song['VocalsSpecHash'])
-        VocalsFeatures = ArraySimilarity(FeaturesHash, Song['VocalsFeaturesHash'])
-        MusicSpec = ArraySimilarity(SpecHash, Song['MusicSpecHash'])
-        MusicFeatures = ArraySimilarity(FeaturesHash, Song['MusicFeaturesHash'])
+        SongSpec = ArraySimilarity(SpecHash, Song['SongSpecHash'], Mode)
+        SongFeatures = ArraySimilarity(FeaturesHash, Song['SongFeaturesHash'], Mode)
+        VocalsSpec = ArraySimilarity(SpecHash, Song['VocalsSpecHash'], Mode)
+        VocalsFeatures = ArraySimilarity(FeaturesHash, Song['VocalsFeaturesHash'], Mode)
+        MusicSpec = ArraySimilarity(SpecHash, Song['MusicSpecHash'], Mode)
+        MusicFeatures = ArraySimilarity(FeaturesHash, Song['MusicFeaturesHash'], Mode)
         print(colored(f"Song Spec Similarity {SongSpec} %",
                       "green"))
         print(colored(f"Song Features Similarity {SongFeatures} %",
@@ -47,6 +47,8 @@ def ArraySimilarity(Arr1, Arr2, Mode="Permissive"):
         if Mode == "Permissive":
             percentage = len(set(Hash1[:, 0]) & set(Hash2[:, 0])) / float(len(set(Hash1[:, 0]) | set(Hash2[:, 0]))) * 100
         else:
+            Hash1 = [(x, y) for x, y in Hash1]
+            Hash2 = [(x, y) for x, y in Hash2]
             percentage = len(set(Hash1) & set(Hash2)) / float(len(set(Hash1) | set(Hash2))) * 100
     else:
         percentage = 0
@@ -57,4 +59,4 @@ def ArraySimilarity(Arr1, Arr2, Mode="Permissive"):
     return percentage
 
 
-FindSimilar("Songs/Amrdiab_wahshteny_vocals_17.mp3")
+FindSimilar("mix.mp3", "Enforcing")
