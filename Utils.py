@@ -79,6 +79,8 @@ class DatabaseHandler:
                 MusicSpecHash, MusicFeaturesHash = self.getHash(MusicFile)
                 print(colored(f"Generated {len(MusicSpecHash)} Spec Hashes & {len(MusicFeaturesHash)} Features Hashes",
                               "green"))
+                if not Team:
+                    Team[0] = "0"
                 self.db.insert(
                     {'Title': Title, 'Artist': Artist, 'Album': Album, 'TeamNo': Team[0], 'SongFile': self.Songs[i],
                      'MusicFile': MusicFile, 'VocalsFile': VocalsFile, "SongSpecHash": SongSpecHash,
