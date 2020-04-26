@@ -3,7 +3,6 @@ import librosa.display
 from scipy import signal
 
 from AudioFunctions import *
-from Utils import *
 
 
 # USE THIS FUNCTION....
@@ -19,7 +18,7 @@ def getSpectrogram(path):
     features = 10 * np.log10(features)
     features[features == -np.inf] = 0
 
-    return spectrogram, features, times
+    return spectrogram, features
 
 
 def MFCC(spectrogram):
