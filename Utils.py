@@ -1,21 +1,36 @@
+import hashlib
 import os
 import re
 from difflib import SequenceMatcher
+from operator import itemgetter
 
 import eyed3
-import imagehash
-from PIL import Image
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.ndimage import generate_binary_structure, maximum_filter, binary_erosion, iterate_structure
 from tinydb import TinyDB, Query
+
+IDX_FREQ_I = 0
+IDX_TIME_J = 1
+DEFAULT_FS = 44100
+DEFAULT_WINDOW_SIZE = 4096
+DEFAULT_OVERLAP_RATIO = 0.5
+DEFAULT_FAN_VALUE = 15
+DEFAULT_AMP_MIN = 5
+PEAK_NEIGHBORHOOD_SIZE = 15
+MIN_HASH_TIME_DELTA = 0
+MAX_HASH_TIME_DELTA = 200
+PEAK_SORT = True
+FINGERPRINT_REDUCTION = 20
 
 
 def similar(a, b):
     return SequenceMatcher(None, a, b).ratio()
 
 
-def HashArray(arr):
-    im = Image.fromarray(arr)
-    hashres = imagehash.phash(arr)
-    return hashres
+def HashArray(arr, amp_min=DEFAULT_AMP_MIN, fan_value=DEFAULT_FAN_VALUE):
+    peaks = get_2D_peaks(arr, plot=False, amp_min=amp_min)
+    return generate_hashes(peaks, fan_value=fan_value)
 
 
 class DatabaseHandler:
@@ -44,18 +59,23 @@ class DatabaseHandler:
                 Team = re.findall(self.pattern, self.Songs[i])
                 File = eyed3.load('Songs/' + self.Songs[i])
                 Title = File.tag.title
+                print("Found Song: " + Title)
                 Artist = File.tag.artist
                 Album = File.tag.album
                 MusicFile = self.FindSimilar(i, self.Music)
                 VocalsFile = self.FindSimilar(i, self.Vocals)
-                if Team:
-                    self.db.insert(
-                        {'Title': Title, 'Artist': Artist, 'Album': Album, 'TeamNo': Team[0], 'SongFile': self.Songs[i],
-                         'MusicFile': MusicFile, 'VocalsFile': VocalsFile})
-                else:
-                    self.db.insert(
-                        {'Title': Title, 'Artist': Artist, 'Album': Album, 'TeamNo': '21', 'SongFile': self.Songs[i],
-                         'MusicFile': MusicFile, 'VocalsFile': VocalsFile})
+                print("Generating Song Hashes")
+                SongSpecHash, SongFeaturesHash = self.getHash(self.Songs[i])
+                print("Generating Vocals Hashes")
+                VocalsSpecHash, VocalsFeaturesHash = self.getHash(VocalsFile)
+                print("Generating Music Hashes")
+                MusicSpecHash, MusicFeaturesHash = self.getHash(MusicFile)
+                self.db.insert(
+                    {'Title': Title, 'Artist': Artist, 'Album': Album, 'TeamNo': Team[0], 'SongFile': self.Songs[i],
+                     'MusicFile': MusicFile, 'VocalsFile': VocalsFile, "SongSpecHash": SongSpecHash,
+                     "SongFeaturesHash": SongFeaturesHash, "VocalsSpecHash": VocalsSpecHash,
+                     "VocalsFeaturesHash": VocalsFeaturesHash, "MusicSpecHash": MusicSpecHash,
+                     "MusicFeaturesHash": MusicFeaturesHash})
 
     def FindSimilar(self, i, Matcher):
         if similar(self.Songs[i], Matcher[i]) > 0.7:
@@ -65,3 +85,114 @@ class DatabaseHandler:
                 if similar(self.Songs[i], x) > 0.7:
                     return x
             return ""
+
+    def GetDB(self):
+        return self.db
+
+    def getHash(self, file):
+        spec, features = getSpectrogram(self.directory + "/" + file)
+        return HashArray(spec), HashArray(features)
+
+    def GetDifferences(self):
+        Data = self.db.all()
+        for song in Data:
+            for song2 in Data:
+                s1 = imagehash.hex_to_hash(song['SongSpecHash'])
+                s2 = imagehash.hex_to_hash(song2['SongSpecHash'])
+                diff = s1 - s2
+                print("SongSpecHash Difference Between " + song['Title'] + " & " + song2['Title'] + " = " + str(diff))
+                s1 = imagehash.hex_to_hash(song['SongFeaturesHash'])
+                s2 = imagehash.hex_to_hash(song2['SongFeaturesHash'])
+                diff = s1 - s2
+                print(
+                    "SongFeaturesHash Difference Between " + song['Title'] + " & " + song2['Title'] + " = " + str(diff))
+                s1 = imagehash.hex_to_hash(song['VocalsSpecHash'])
+                s2 = imagehash.hex_to_hash(song2['VocalsSpecHash'])
+                diff = s1 - s2
+                print("VocalsSpecHash Difference Between " + song['Title'] + " & " + song2['Title'] + " = " + str(diff))
+                s1 = imagehash.hex_to_hash(song['VocalsFeaturesHash'])
+                s2 = imagehash.hex_to_hash(song2['VocalsFeaturesHash'])
+                diff = s1 - s2
+                print("VocalsFeaturesHash Difference Between " + song['Title'] + " & " + song2['Title'] + " = " + str(
+                    diff))
+                s1 = imagehash.hex_to_hash(song['MusicSpecHash'])
+                s2 = imagehash.hex_to_hash(song2['MusicSpecHash'])
+                diff = s1 - s2
+                print("MusicSpecHash Difference Between " + song['Title'] + " & " + song2['Title'] + " = " + str(diff))
+                s1 = imagehash.hex_to_hash(song['MusicFeaturesHash'])
+                s2 = imagehash.hex_to_hash(song2['MusicFeaturesHash'])
+                diff = s1 - s2
+                print("MusicFeaturesHash Difference Between " + song['Title'] + " & " + song2['Title'] + " = " + str(
+                    diff))
+
+
+def get_2D_peaks(arr2D, plot=False, amp_min=DEFAULT_AMP_MIN):
+    # http://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.morphology.iterate_structure.html#scipy.ndimage.morphology.iterate_structure
+    struct = generate_binary_structure(2, 1)
+    neighborhood = iterate_structure(struct, PEAK_NEIGHBORHOOD_SIZE)
+
+    # find local maxima using our fliter shape
+    local_max = maximum_filter(arr2D, footprint=neighborhood) == arr2D
+    background = (arr2D == 0)
+    eroded_background = binary_erosion(background, structure=neighborhood,
+                                       border_value=1)
+
+    # Boolean mask of arr2D with True at peaks
+    detected_peaks = local_max ^ eroded_background
+
+    # extract peaks
+    amps = arr2D[detected_peaks]
+    j, i = np.where(detected_peaks)
+
+    # filter peaks
+    amps = amps.flatten()
+    peaks = zip(i, j, amps)
+    peaks_filtered = [x for x in peaks if x[2] > amp_min]  # freq, time, amp
+
+    # get indices for frequency and time
+    frequency_idx = [x[1] for x in peaks_filtered]
+    time_idx = [x[0] for x in peaks_filtered]
+
+    # scatter of the peaks
+    if plot:
+        fig, ax = plt.subplots()
+        ax.imshow(arr2D)
+        ax.scatter(time_idx, frequency_idx)
+        ax.set_xlabel('Time')
+        ax.set_ylabel('Frequency')
+        ax.set_title("Spectrogram")
+        plt.gca().invert_yaxis()
+        plt.show()
+
+    return list(zip(frequency_idx, time_idx))
+
+
+def generate_hashes(peaks, fan_value=DEFAULT_FAN_VALUE):
+    if PEAK_SORT:
+        peaks.sort(key=itemgetter(1))
+
+        # bruteforce all peaks
+        for i in range(len(peaks)):
+            for j in range(1, fan_value):
+                if (i + j) < len(peaks):
+
+                    # take current & next peak frequency value
+                    freq1 = peaks[i][IDX_FREQ_I]
+                    freq2 = peaks[i + j][IDX_FREQ_I]
+
+                    # take current & next -peak time offset
+                    t1 = peaks[i][IDX_TIME_J]
+                    t2 = peaks[i + j][IDX_TIME_J]
+
+                    # get diff of time offsets
+                    t_delta = t2 - t1
+
+                    # check if delta is between min & max
+                    if MIN_HASH_TIME_DELTA <= t_delta <= MAX_HASH_TIME_DELTA:
+                        h = hashlib.sha1(("%s|%s|%s" % (
+                            str(freq1).encode('utf-8'), str(freq2).encode('utf-8'),
+                            str(t_delta).encode('utf-8'))).encode('utf-8'))
+                        yield h.hexdigest()[0:FINGERPRINT_REDUCTION], t1
+
+
+from Spectrogram import getSpectrogram
