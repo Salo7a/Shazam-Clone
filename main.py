@@ -68,4 +68,4 @@ def ArraySimilarity(Arr1, Arr2, Mode="Permissive"):
     return percentage
 
 
-FindSimilar("mix.mp3", "Enforcing")
+FindSimilar("mix.mp3", SongMode="Path", SimilarityMode="Permissive")
