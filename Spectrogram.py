@@ -6,9 +6,12 @@ from AudioFunctions import *
 
 
 # USE THIS FUNCTION....
-def getSpectrogram(path):
-    songClass = song2data(path)
-    songArray = getFirstData(songClass.data, 60)
+def getSpectrogram(path, Mode="path"):
+    if Mode == "path":
+        songClass = song2data(path)
+        songArray = getFirstData(songClass.data, 60)
+    else:
+        songArray = path
     frequencies, times, spectrogram = signal.spectrogram(songArray, 44100, window="hanning", nperseg=4096,
                                                          noverlap=2048,
                                                          nfft=4096)

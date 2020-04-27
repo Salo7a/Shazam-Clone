@@ -6,23 +6,29 @@ db = dh.GetDB()
 
 # dh.UpdateDB()
 
-def FindSimilar(Path, Mode="Permissive"):
-    print(colored(f"Reading File {Path}",
-                  "yellow"))
-    spectrogram, features = getSpectrogram(Path)
+def FindSimilar(Song, SongMode="Path", SimilarityMode="Permissive"):
+    if SongMode == "Path":
+        print(colored(f"Reading File {Song}",
+                      "yellow"))
+        spectrogram, features = getSpectrogram(Song)
+    else:
+        print(colored(f"Reading Song Array",
+                      "yellow"))
+        spectrogram, features = getSpectrogram(Song, "Array")
     SpecHash = HashArray(spectrogram)
     FeaturesHash = HashArray(features)
     print(colored("Beginning Song Detection",
                   "yellow"))
+    SimilarSongs = []
     for Song in db.all():
         Title = Song['Title']
         print(colored("For Song:", "yellow"), colored(f"{Title}", "magenta"))
-        SongSpec = ArraySimilarity(SpecHash, Song['SongSpecHash'], Mode)
-        SongFeatures = ArraySimilarity(FeaturesHash, Song['SongFeaturesHash'], Mode)
-        VocalsSpec = ArraySimilarity(SpecHash, Song['VocalsSpecHash'], Mode)
-        VocalsFeatures = ArraySimilarity(FeaturesHash, Song['VocalsFeaturesHash'], Mode)
-        MusicSpec = ArraySimilarity(SpecHash, Song['MusicSpecHash'], Mode)
-        MusicFeatures = ArraySimilarity(FeaturesHash, Song['MusicFeaturesHash'], Mode)
+        SongSpec = ArraySimilarity(SpecHash, Song['SongSpecHash'], SimilarityMode)
+        SongFeatures = ArraySimilarity(FeaturesHash, Song['SongFeaturesHash'], SimilarityMode)
+        VocalsSpec = ArraySimilarity(SpecHash, Song['VocalsSpecHash'], SimilarityMode)
+        VocalsFeatures = ArraySimilarity(FeaturesHash, Song['VocalsFeaturesHash'], SimilarityMode)
+        MusicSpec = ArraySimilarity(SpecHash, Song['MusicSpecHash'], SimilarityMode)
+        MusicFeatures = ArraySimilarity(FeaturesHash, Song['MusicFeaturesHash'], SimilarityMode)
         print(colored(f"Song Spec Similarity {SongSpec} %",
                       "green"))
         print(colored(f"Song Features Similarity {SongFeatures} %",
@@ -38,6 +44,8 @@ def FindSimilar(Path, Mode="Permissive"):
         total = SongSpec + SongFeatures + VocalsSpec + VocalsFeatures + MusicSpec + MusicFeatures
         print(colored(f"Similarity Index {total} ",
                       "red"))
+        SimilarSongs.append([Title, total])
+    return np.asarray(SimilarSongs)
 
 
 def ArraySimilarity(Arr1, Arr2, Mode="Permissive"):
@@ -45,7 +53,8 @@ def ArraySimilarity(Arr1, Arr2, Mode="Permissive"):
     Hash2 = np.asarray(Arr2)
     if len(Hash1) != 0 and len(Hash2) != 0:
         if Mode == "Permissive":
-            percentage = len(set(Hash1[:, 0]) & set(Hash2[:, 0])) / float(len(set(Hash1[:, 0]) | set(Hash2[:, 0]))) * 100
+            percentage = len(set(Hash1[:, 0]) & set(Hash2[:, 0])) / float(
+                len(set(Hash1[:, 0]) | set(Hash2[:, 0]))) * 100
         else:
             Hash1 = [(x, y) for x, y in Hash1]
             Hash2 = [(x, y) for x, y in Hash2]
