@@ -71,4 +71,9 @@ def SpectrogramFeatures(spectrogram):
     # print(features.shape)
     return features
 
-
+def mix(songClass1, songClass2, weight):
+    # songClass1 = song2data(path1)
+    songArray1 = getFirstData(songClass1.data, 60)
+    # songClass2 = song2data(path2)
+    songArray2 = getFirstData(songClass2.data, 60)
+    return songArray1*weight + songArray2*(1-weight)

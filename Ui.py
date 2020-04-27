@@ -4,6 +4,8 @@ from PyQt5.QtCore import *
 import sys
 from AudioFunctions import *
 import time
+from main import FindSimilar
+from Spectrogram import mix
 
 class UI(QMainWindow):
     def __init__(self):
@@ -21,6 +23,7 @@ class UI(QMainWindow):
         self.mainBox.addWidget(self.mixingGroup)
 
         self.startButton = QPushButton("Start Mixing")
+        self.startButton.clicked.connect(self.mixSongsAndShow)
         self.startButton.setEnabled(False)
         self.mainBox.addWidget(self.startButton)
 
@@ -60,7 +63,12 @@ class UI(QMainWindow):
         self.songWeights = [sliderValue, (100-sliderValue)]
         self.songBoxes[0].weightLabel.setText(str(self.songWeights[0])+'%')
         self.songBoxes[1].weightLabel.setText(str(self.songWeights[1])+"%")
-    
+
+    def mixSongsAndShow(self):
+        mixture = mix(self.songData[0], self.songData[1], self.songWeights[0]/100)
+        self.similarityList = FindSimilar(mixture, SongMode="Array", SimilarityMode="Permissive")
+        self.showSimilarity()
+
     @pyqtSlot(list)
     def recieveData(self, data):
         print("recieved here also")
@@ -83,27 +91,21 @@ class UI(QMainWindow):
         #table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tableWidget.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tableWidget.setHorizontalHeaderLabels("Song Name; Simliarity Index".split(';'))
-        self.tableWidget.setItem(0,0, QTableWidgetItem("Cell (1,1)"))
-        self.tableWidget.setItem(0,1, QTableWidgetItem("Cell (1,2)"))
-        self.tableWidget.setItem(1,0, QTableWidgetItem("Cell (2,1)"))
-        self.tableWidget.setItem(1,1, QTableWidgetItem("Cell (2,2)"))
-        self.tableWidget.setItem(2,0, QTableWidgetItem("Cell (3,1)"))
-        self.tableWidget.setItem(2,1, QTableWidgetItem("Cell (3,2)"))
-        self.tableWidget.setItem(3,0, QTableWidgetItem("Cell (4,1)"))
-        self.tableWidget.setItem(3,1, QTableWidgetItem("Cell (4,2)"))
-        self.tableWidget.setItem(4,0, QTableWidgetItem("Cell (5,1)"))
-        self.tableWidget.setItem(4,1, QTableWidgetItem("Cell (5,2)"))
-        self.tableWidget.setItem(5,0, QTableWidgetItem("Cell (6,1)"))
-        self.tableWidget.setItem(5,1, QTableWidgetItem("Cell (6,2)"))
-        self.tableWidget.setItem(6,0, QTableWidgetItem("Cell (7,1)"))
-        self.tableWidget.setItem(6,1, QTableWidgetItem("Cell (7,2)"))
-        self.tableWidget.setItem(7,0, QTableWidgetItem("Cell (8,1)"))
-        self.tableWidget.setItem(7,1, QTableWidgetItem("Cell (8,2)"))
-        self.tableWidget.setItem(8,0, QTableWidgetItem("Cell (9,1)"))
-        self.tableWidget.setItem(8,1, QTableWidgetItem("Cell (9,2)"))
-        self.tableWidget.setItem(9,0, QTableWidgetItem("Cell (10,1)"))
-        self.tableWidget.setItem(9,1, QTableWidgetItem("Cell (10,2)"))
+        self.tableWidget.setHorizontalHeaderLabels("Song Name; Simliarity Factor".split(';'))
+        for row in range(10):
+            for col in range(2):
+                str = ''
+                if col == 0:
+                    str = 'Song {}'.format(row+1)
+                else:
+                    str = 'Similarity {}'.format(row+1)
+                self.tableWidget.setItem(row, col, QTableWidgetItem(str))
+
+    def showSimilarity(self):
+        for row in range(10):
+            for col in range(2):
+                self.tableWidget.setItem(row, col, QTableWidgetItem(str(self.similarityList[row][col])))
+
 
 
 

@@ -1,12 +1,18 @@
 from Utils import *
+import pandas as pd
+from pandas import ExcelWriter
+from pandas import ExcelFile
+import numpy as np
+from Spectrogram import mix
 
-dh = DatabaseHandler()
-db = dh.GetDB()
 
 
 # dh.UpdateDB()
 
 def FindSimilar(Song, SongMode="Path", SimilarityMode="Permissive"):
+    dh = DatabaseHandler()
+    db = dh.GetDB()
+    excelFlag = 1
     if SongMode == "Path":
         print(colored(f"Reading File {Song}",
                       "yellow"))
@@ -20,15 +26,30 @@ def FindSimilar(Song, SongMode="Path", SimilarityMode="Permissive"):
     print(colored("Beginning Song Detection",
                   "yellow"))
     SimilarSongs = []
+    TitleList = []
+    SongSpecList = []
+    SongFeaturesList = []
+    VocalsSpecList = []
+    VocalsFeaturesList = []
+    MusicsSpecList = []
+    MusicFeaturesList = []
+    ResultsList = []
     for Song in db.all():
         Title = Song['Title']
+        TitleList.append(Title)
         print(colored("For Song:", "yellow"), colored(f"{Title}", "magenta"))
         SongSpec = ArraySimilarity(SpecHash, Song['SongSpecHash'], SimilarityMode)
+        SongSpecList.append(SongSpec)
         SongFeatures = ArraySimilarity(FeaturesHash, Song['SongFeaturesHash'], SimilarityMode)
+        SongFeaturesList.append(SongFeatures)
         VocalsSpec = ArraySimilarity(SpecHash, Song['VocalsSpecHash'], SimilarityMode)
+        VocalsSpecList.append(VocalsSpec)
         VocalsFeatures = ArraySimilarity(FeaturesHash, Song['VocalsFeaturesHash'], SimilarityMode)
+        VocalsFeaturesList.append(VocalsFeatures)
         MusicSpec = ArraySimilarity(SpecHash, Song['MusicSpecHash'], SimilarityMode)
+        MusicsSpecList.append(MusicSpec)
         MusicFeatures = ArraySimilarity(FeaturesHash, Song['MusicFeaturesHash'], SimilarityMode)
+        MusicFeaturesList.append(MusicFeatures)
         print(colored(f"Song Spec Similarity {SongSpec} %",
                       "green"))
         print(colored(f"Song Features Similarity {SongFeatures} %",
@@ -41,11 +62,25 @@ def FindSimilar(Song, SongMode="Path", SimilarityMode="Permissive"):
                       "green"))
         print(colored(f"Music Features Similarity {MusicFeatures} %",
                       "cyan"))
-        total = SongSpec + SongFeatures + VocalsSpec + VocalsFeatures + MusicSpec + MusicFeatures
+        total = 0.5 * (SongSpec + SongFeatures) + 1.5 * (VocalsSpec + VocalsFeatures) + MusicSpec + MusicFeatures
+        ResultsList.append(total)
         print(colored(f"Similarity Index {total} ",
                       "red"))
         SimilarSongs.append([Title, total])
-    return np.asarray(SimilarSongs)
+    df = pd.DataFrame({'SongName': TitleList,
+                       'Song Spec': SongSpecList,
+                       'Song Features': SongFeaturesList,
+                       'Vocals Spec': VocalsSpecList,
+                       'Vocals Features': VocalsFeaturesList,
+                       'Music Spec': MusicsSpecList,
+                       'Music Features': MusicFeaturesList,
+                       'Total': ResultsList})
+
+    if excelFlag == 1:
+        writer = ExcelWriter('SimilaritySheet.xlsx')
+        df.to_excel(writer, 'Sheet1', index=False)
+        writer.save()
+    return sorted(SimilarSongs, key=lambda song: song[1], reverse=True)
 
 
 def ArraySimilarity(Arr1, Arr2, Mode="Permissive"):
@@ -68,4 +103,6 @@ def ArraySimilarity(Arr1, Arr2, Mode="Permissive"):
     return percentage
 
 
-FindSimilar("mix.mp3", SongMode="Path", SimilarityMode="Permissive")
+# mixture = mix("amr1.mp3", "sia1.mp3", 0.8)
+# res = FindSimilar(mixture, SongMode="Array", SimilarityMode="Permissive")
+# print(res)
