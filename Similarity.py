@@ -1,10 +1,6 @@
-from Utils import *
-import pandas as pd
-from pandas import ExcelWriter
-from pandas import ExcelFile
 import numpy as np
-from Spectrogram import mix
 
+from Utils import *
 
 
 # dh.UpdateDB()
@@ -67,19 +63,19 @@ def FindSimilar(Song, SongMode="Path", SimilarityMode="Permissive"):
         print(colored(f"Similarity Index {total} ",
                       "red"))
         SimilarSongs.append([Title, total])
-    df = pd.DataFrame({'SongName': TitleList,
-                       'Song Spec': SongSpecList,
-                       'Song Features': SongFeaturesList,
-                       'Vocals Spec': VocalsSpecList,
-                       'Vocals Features': VocalsFeaturesList,
-                       'Music Spec': MusicsSpecList,
-                       'Music Features': MusicFeaturesList,
-                       'Total': ResultsList})
-
-    if excelFlag == 1:
-        writer = ExcelWriter('SimilaritySheet.xlsx')
-        df.to_excel(writer, 'Sheet1', index=False)
-        writer.save()
+    # df = pd.DataFrame({'SongName': TitleList,
+    #                    'Song Spec': SongSpecList,
+    #                    'Song Features': SongFeaturesList,
+    #                    'Vocals Spec': VocalsSpecList,
+    #                    'Vocals Features': VocalsFeaturesList,
+    #                    'Music Spec': MusicsSpecList,
+    #                    'Music Features': MusicFeaturesList,
+    #                    'Total': ResultsList})
+    #
+    # if excelFlag == 1:
+    #     writer = ExcelWriter('SimilaritySheet.xlsx')
+    #     df.to_excel(writer, 'Sheet1', index=False)
+    #     writer.save()
     return sorted(SimilarSongs, key=lambda song: song[1], reverse=True)
 
 
@@ -102,7 +98,6 @@ def ArraySimilarity(Arr1, Arr2, Mode="Permissive"):
 
     return percentage
 
-
 # mixture = mix("amr1.mp3", "sia1.mp3", 0.8)
-# res = FindSimilar(mixture, SongMode="Array", SimilarityMode="Permissive")
+# res = FindSimilar("Songs/Amrdiab_wahshteny_17.mp3", SongMode="Path", SimilarityMode="Permissive")
 # print(res)
