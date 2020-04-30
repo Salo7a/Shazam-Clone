@@ -13,19 +13,28 @@ class UI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.songData = [None, None]
+        self.singleSong = None
+        self.state = 0
         self.songWeights = [50, 50]
         self.songBoxes = [songUI(0), songUI(1)]
+        self.singleBox = singleUI()
         self.songBoxes[0].sendData.connect(self.recieveData)
         self.songBoxes[1].sendData.connect(self.recieveData)
+        self.singleBox.sendSong.connect(self.recieveSong)
         self.mainBox = QVBoxLayout()
         self.mixingBox = QHBoxLayout()
+
+        self.radioUI()
+
         self.setMixingUI()
         self.mixingGroup = QGroupBox()
         self.mixingGroup.setLayout(self.mixingBox)
         self.mainBox.addWidget(self.mixingGroup)
-
-        self.startButton = QPushButton("Start Mixing")
-        self.startButton.clicked.connect(self.mixSongsAndShow)
+        self.mainBox.addWidget(self.singleBox)
+        self.singleBox.show()
+        self.mixingGroup.hide()
+        self.startButton = QPushButton("Search")
+        self.startButton.clicked.connect(self.searchSimilarity)
         self.startButton.setEnabled(False)
         self.mainBox.addWidget(self.startButton)
 
@@ -38,7 +47,6 @@ class UI(QMainWindow):
         # header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
         # header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
         self.mainBox.addWidget(self.tableWidget)
-
         self.mainGroup = QGroupBox()
         self.mainGroup.setLayout(self.mainBox)
         self.setCentralWidget(self.mainGroup)
@@ -56,6 +64,7 @@ class UI(QMainWindow):
         self.slider.setTickInterval(10)
         self.slider.setValue(50)
         self.slider.valueChanged.connect(self.sliderMoved)
+        self.slider.setEnabled(False)
         self.mixingBox.addWidget(self.slider)
         self.mixingBox.addWidget(self.songBoxes[1])
 
@@ -65,8 +74,55 @@ class UI(QMainWindow):
         self.songBoxes[0].weightLabel.setText(str(self.songWeights[0]) + '%')
         self.songBoxes[1].weightLabel.setText(str(self.songWeights[1]) + "%")
 
-    def mixSongsAndShow(self):
-        mixture = mix(self.songData[0], self.songData[1], self.songWeights[0] / 100)
+    def radioUI(self):
+        hboxLayout = QHBoxLayout()
+        self.radio1 = QRadioButton("Single Song")
+        self.radio1.setChecked(True)
+        hboxLayout.addWidget(self.radio1)
+        self.radio1.toggled.connect(self.toggleState)
+
+        self.radio2 = QRadioButton("Mix Songs")
+        self.radio2.setChecked(False)
+        hboxLayout.addWidget(self.radio2)
+        self.radio2.toggled.connect(self.toggleState)
+
+        self.reset = QPushButton("Reset")
+        self.reset.clicked.connect(self.resetData)
+        hboxLayout.addWidget(self.reset)
+
+        groupBox = QGroupBox()
+        groupBox.setLayout(hboxLayout)
+        self.mainBox.addWidget(groupBox)
+
+    def toggleState(self):
+        radioBtn = self.sender()
+        if radioBtn.isChecked():
+            if radioBtn.text() == "Single Song":
+                self.state = 0
+                self.singleBox.show()
+                self.mixingGroup.hide()
+            elif radioBtn.text() == "Mix Songs":
+                self.state = 1
+                self.singleBox.hide()
+                self.mixingGroup.show()
+            self.checkData()
+
+    def resetData(self):
+        self.songData = [None, None]
+        self.singleSong = None
+        self.slider.setValue(50)
+        self.slider.setEnabled(False)
+        self.startButton.setEnabled(False)
+        self.songBoxes[0].nameLabel.setText("Song #1")
+        self.songBoxes[1].nameLabel.setText("Song #2")
+        self.singleBox.label.setText("Select Song")
+        self.tableDefault()
+
+    def searchSimilarity(self):
+        if self.state == 1:
+            mixture = mix(self.songData[0], self.songData[1], self.songWeights[0] / 100)
+        else:
+            mixture = self.singleSong
         self.similarityList = FindSimilar(mixture, SongMode="Array", SimilarityMode="Permissive")
         self.showSimilarity()
 
@@ -76,9 +132,25 @@ class UI(QMainWindow):
         self.songData[data[0]] = data[1]
         self.checkData()
 
+    @pyqtSlot(list)
+    def recieveSong(self, data):
+        print("recieved song here also")
+        self.singleSong = data[0]
+        self.startButton.setEnabled(True)
+
     def checkData(self):
-        if self.songData[0] != None and self.songData[1] != None:
-            self.startButton.setEnabled(True)
+        if self.state == 1:
+            if self.songData[0] is not None and self.songData[1] is not None:
+                self.slider.setEnabled(True)
+                self.startButton.setEnabled(True)
+            else:
+                self.slider.setEnabled(False)
+                self.startButton.setEnabled(False)
+        else:
+            if self.singleSong is not None:
+                self.startButton.setEnabled(True)
+            else:
+                self.startButton.setEnabled(False)
 
     def createTable(self):
         # Create table
@@ -92,6 +164,9 @@ class UI(QMainWindow):
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tableWidget.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tableWidget.setHorizontalHeaderLabels("Song Name; Simliarity Factor".split(';'))
+        self.tableDefault()
+
+    def tableDefault(self):
         for row in range(10):
             for col in range(2):
                 str = ''
@@ -147,6 +222,50 @@ class songUI(QWidget):
         sendList = [self.index, self.songClass]
         self.sendData.emit(sendList)
         print("Sent Here")
+
+    def getFileName(self, path):
+        """
+        getFileName gets the file name out of its path
+        :param path: the path of the file as it contains the file name
+        :return: the name of the file
+        """
+        return path.split('.')[-2].split('/')[-1]
+
+
+class singleUI(QWidget):
+    sendSong = pyqtSignal(list)
+
+    def __init__(self):
+        super().__init__()
+        self.selectButton = QPushButton("Select Song")
+        self.selectButton.clicked.connect(self.openFile)
+        self.selectButton.setMaximumWidth(200)
+        self.selectButton.setStyleSheet("font-size: 20px")
+        self.label = QLabel("Select Song")
+        self.label.setStyleSheet("font-size: 20px")
+        self.label.setAlignment(Qt.AlignCenter)
+        layout = QHBoxLayout()
+        layout.addWidget(self.selectButton)
+        layout.addWidget(self.label)
+        self.setLayout(layout)
+
+    def openFile(self):
+        options = QFileDialog.Options()
+        path, _ = QFileDialog.getOpenFileName(self, "Open Music", "",
+                                              "Music Files (*.mp3)", options=options)
+
+        if path:
+            self.songClass = song2data(path)
+            self.sendSongData()
+            songName = self.getFileName(path)
+            self.label.setText(songName)
+
+    @pyqtSlot()
+    def sendSongData(self):
+        songData = getFirstData(self.songClass.data, 60)
+        data = [songData]
+        self.sendSong.emit(data)
+        print("Sent Song Here")
 
     def getFileName(self, path):
         """
