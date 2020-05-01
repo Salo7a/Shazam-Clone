@@ -1,5 +1,3 @@
-import numpy as np
-
 from Utils import *
 
 
@@ -32,6 +30,7 @@ def FindSimilar(Song, SongMode="Path", SimilarityMode="Permissive"):
     ResultsList = []
     for Song in db.all():
         Title = Song['Title']
+        Artist = Song['Artist']
         TitleList.append(Title)
         print(colored("For Song:", "yellow"), colored(f"{Title}", "magenta"))
         SongSpec = ArraySimilarity(SpecHash, Song['SongSpecHash'], SimilarityMode)
@@ -46,23 +45,23 @@ def FindSimilar(Song, SongMode="Path", SimilarityMode="Permissive"):
         MusicsSpecList.append(MusicSpec)
         MusicFeatures = ArraySimilarity(FeaturesHash, Song['MusicFeaturesHash'], SimilarityMode)
         MusicFeaturesList.append(MusicFeatures)
-        print(colored(f"Song Spec Similarity {SongSpec} %",
-                      "green"))
-        print(colored(f"Song Features Similarity {SongFeatures} %",
-                      "cyan"))
-        print(colored(f"Vocals Spec Similarity {VocalsSpec} %",
-                      "green"))
-        print(colored(f"Vocals Features Similarity {VocalsFeatures} %",
-                      "cyan"))
-        print(colored(f"Music Spec Similarity {MusicSpec} %",
-                      "green"))
-        print(colored(f"Music Features Similarity {MusicFeatures} %",
-                      "cyan"))
+        # print(colored(f"Song Spec Similarity {SongSpec} %",
+        #               "green"))
+        # print(colored(f"Song Features Similarity {SongFeatures} %",
+        #               "cyan"))
+        # print(colored(f"Vocals Spec Similarity {VocalsSpec} %",
+        #               "green"))
+        # print(colored(f"Vocals Features Similarity {VocalsFeatures} %",
+        #               "cyan"))
+        # print(colored(f"Music Spec Similarity {MusicSpec} %",
+        #               "green"))
+        # print(colored(f"Music Features Similarity {MusicFeatures} %",
+        #               "cyan"))
         total = 0.5 * (SongSpec + SongFeatures) + 1.5 * (VocalsSpec + VocalsFeatures) + MusicSpec + MusicFeatures
         ResultsList.append(total)
         print(colored(f"Similarity Index {total} ",
                       "red"))
-        SimilarSongs.append([Title, total])
+        SimilarSongs.append([Title, Artist, total])
     # df = pd.DataFrame({'SongName': TitleList,
     #                    'Song Spec': SongSpecList,
     #                    'Song Features': SongFeaturesList,
@@ -76,7 +75,7 @@ def FindSimilar(Song, SongMode="Path", SimilarityMode="Permissive"):
     #     writer = ExcelWriter('SimilaritySheet.xlsx')
     #     df.to_excel(writer, 'Sheet1', index=False)
     #     writer.save()
-    return sorted(SimilarSongs, key=lambda song: song[1], reverse=True)
+    return sorted(SimilarSongs, key=lambda song: song[2], reverse=True)
 
 
 def ArraySimilarity(Arr1, Arr2, Mode="Permissive"):

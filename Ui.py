@@ -1,8 +1,9 @@
 import sys
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QPalette, QColor, QFont, QIcon
+from PyQt5.QtWidgets import QWidget, QMainWindow, QFileDialog, QApplication, QVBoxLayout, QGroupBox, QPushButton, \
+    QSlider, QRadioButton, QHBoxLayout, QTableWidget, QHeaderView, QTableWidgetItem, QLabel
 
 from AudioFunctions import *
 from Similarity import FindSimilar
@@ -41,6 +42,7 @@ class UI(QMainWindow):
         self.createTable()
         self.tableWidget.setColumnWidth(0, 150)
         self.tableWidget.setColumnWidth(1, 150)
+        self.tableWidget.setColumnWidth(2, 200)
         # self.tableWidget.resizeColumnsToContents()
         # header = self.tableWidget.horizontalHeader()       
         # header.setSectionResizeMode(0, QHeaderView.Stretch)
@@ -50,6 +52,9 @@ class UI(QMainWindow):
         self.mainGroup = QGroupBox()
         self.mainGroup.setLayout(self.mainBox)
         self.setCentralWidget(self.mainGroup)
+        self.width = 500
+        self.height = 400
+        self.setGeometry(50, 50, self.width, self.height)
 
     def setMixingUI(self):
         self.mixingBox.addWidget(self.songBoxes[0])
@@ -58,8 +63,8 @@ class UI(QMainWindow):
         self.slider.setTickPosition(QSlider.TicksBelow)
         self.slider.setMinimum(0)
         self.slider.setMaximum(100)
-        self.slider.setMinimumWidth(200)
-        self.slider.setMaximumWidth(400)
+        self.slider.setMinimumWidth(300)
+        self.slider.setMaximumWidth(500)
         self.slider.setSingleStep(10)
         self.slider.setTickInterval(10)
         self.slider.setValue(50)
@@ -156,29 +161,31 @@ class UI(QMainWindow):
         # Create table
         self.tableWidget = QTableWidget()
         self.tableWidget.setRowCount(10)
-        self.tableWidget.setColumnCount(2)
+        self.tableWidget.setColumnCount(3)
         self.tableWidget.setStyleSheet("font-size: 16px")
         self.tableWidget.setEditTriggers(QTableWidget.NoEditTriggers)
         self.tableWidget.setFont(QFont("Times", 20))
         # table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
         self.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.tableWidget.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tableWidget.setHorizontalHeaderLabels("Song Name; Simliarity Factor".split(';'))
+        self.tableWidget.setHorizontalHeaderLabels("Song Name; Artist ;Simliarity Factor".split(';'))
         self.tableDefault()
 
     def tableDefault(self):
         for row in range(10):
-            for col in range(2):
+            for col in range(3):
                 str = ''
                 if col == 0:
                     str = 'Song {}'.format(row + 1)
+                elif col == 1:
+                    str = 'Artist {}'.format(row + 1)
                 else:
                     str = 'Similarity {}'.format(row + 1)
                 self.tableWidget.setItem(row, col, QTableWidgetItem(str))
 
     def showSimilarity(self):
         for row in range(10):
-            for col in range(2):
+            for col in range(3):
                 self.tableWidget.setItem(row, col, QTableWidgetItem(str(self.similarityList[row][col])))
 
 
@@ -202,7 +209,7 @@ class songUI(QWidget):
         songBox.addWidget(self.nameLabel)
         songBox.addWidget(self.weightLabel)
         songBox.addWidget(self.openButton)
-        self.setMaximumWidth(200)
+        self.setMaximumWidth(500)
         self.setMaximumHeight(300)
         self.setLayout(songBox)
 
@@ -239,7 +246,7 @@ class singleUI(QWidget):
         super().__init__()
         self.selectButton = QPushButton("Select Song")
         self.selectButton.clicked.connect(self.openFile)
-        self.selectButton.setMaximumWidth(200)
+        self.selectButton.setMaximumWidth(500)
         self.selectButton.setStyleSheet("font-size: 20px")
         self.label = QLabel("Select Song")
         self.label.setStyleSheet("font-size: 20px")
@@ -278,7 +285,25 @@ class singleUI(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    app.setApplicationName("3S Music Mixer")
+    app.setApplicationName("3S Music Identifier & Mixer")
+    app.setWindowIcon(QIcon("track.png"))
+    app.setStyle("Fusion")
+    palette = QPalette()
+    palette.setColor(QPalette.Window, QColor(53, 53, 53))
+    palette.setColor(QPalette.WindowText, Qt.white)
+    palette.setColor(QPalette.Base, QColor(25, 25, 25))
+    palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+    palette.setColor(QPalette.ToolTipBase, Qt.white)
+    palette.setColor(QPalette.ToolTipText, Qt.white)
+    palette.setColor(QPalette.Text, Qt.white)
+    palette.setColor(QPalette.Button, QColor(53, 53, 53))
+    palette.setColor(QPalette.ButtonText, Qt.white)
+    palette.setColor(QPalette.BrightText, Qt.red)
+    palette.setColor(QPalette.Link, QColor(42, 130, 218))
+    palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+    palette.setColor(QPalette.HighlightedText, Qt.black)
+    app.setPalette(palette)
+    app.setStyleSheet("QToolTip { color: #ffffff; background-color: #2a82da; border: 1px solid white; }")
     win = UI()
     win.show()
     sys.exit(app.exec_())
